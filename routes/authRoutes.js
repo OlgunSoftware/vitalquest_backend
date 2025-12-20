@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe, updateXp, addXp } = require('../controllers/authController');
+const { register, login, getMe, updateXp, addXp, subtractXp } = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Public routes
@@ -11,5 +11,6 @@ router.post('/login', login);
 router.get('/me', authMiddleware, getMe);
 router.put('/xp', authMiddleware, updateXp);
 router.post('/xp/add', authMiddleware, addXp);
+router.post('/xp/subtract', authMiddleware, subtractXp);
 
 module.exports = router;

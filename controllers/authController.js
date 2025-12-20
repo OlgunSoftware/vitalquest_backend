@@ -315,10 +315,66 @@ const addXp = async (req, res) => {
   }
 };
 
+// XP değerinden çıkarma yap
+const subtractXp = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (amount === undefined || typeof amount !== 'number' || amount < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli bir pozitif XP miktarı girin!'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET xp_value = GREATEST(xp_value - $1, 0), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
+      [amount, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı!'
+      });
+    }
+
+    const user = result.rows[0];
+
+    res.status(200).json({
+      success: true,
+      message: `${amount} XP çıkarıldı!`,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          surname: user.surname,
+          email: user.email,
+          age: user.age,
+          job: user.job,
+          xpValue: user.xp_value,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Subtract XP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'XP çıkarılırken bir hata oluştu!'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateXp,
-  addXp
+  addXp,
+  subtractXp
 };

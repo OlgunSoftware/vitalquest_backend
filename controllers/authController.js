@@ -205,24 +205,24 @@ const getMe = async (req, res) => {
   }
 };
 
-// XP değerini güncelle
+// XP değerini güncelle (pozitif = ekle, negatif = çıkar)
 const updateXp = async (req, res) => {
   try {
-    const { xpValue } = req.body;
+    const { amount } = req.body;
 
-    if (xpValue === undefined || typeof xpValue !== 'number') {
+    if (amount === undefined || typeof amount !== 'number') {
       return res.status(400).json({
         success: false,
-        message: 'Geçerli bir XP değeri girin!'
+        message: 'Geçerli bir XP miktarı girin!'
       });
     }
 
     const result = await pool.query(
       `UPDATE users 
-       SET xp_value = $1, updated_at = CURRENT_TIMESTAMP
+       SET xp_value = GREATEST(xp_value + $1, 0), updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
        RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
-      [xpValue, req.userId]
+      [amount, req.userId]
     );
 
     if (result.rows.length === 0) {
@@ -233,10 +233,11 @@ const updateXp = async (req, res) => {
     }
 
     const user = result.rows[0];
+    const message = amount >= 0 ? `${amount} XP eklendi!` : `${Math.abs(amount)} XP çıkarıldı!`;
 
     res.status(200).json({
       success: true,
-      message: 'XP değeri güncellendi!',
+      message,
       data: {
         user: {
           id: user.id,
@@ -260,121 +261,9 @@ const updateXp = async (req, res) => {
   }
 };
 
-// XP değerine ekleme yap
-const addXp = async (req, res) => {
-  try {
-    const { amount } = req.body;
-
-    if (amount === undefined || typeof amount !== 'number') {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir XP miktarı girin!'
-      });
-    }
-
-    const result = await pool.query(
-      `UPDATE users 
-       SET xp_value = xp_value + $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
-      [amount, req.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Kullanıcı bulunamadı!'
-      });
-    }
-
-    const user = result.rows[0];
-
-    res.status(200).json({
-      success: true,
-      message: `${amount} XP eklendi!`,
-      data: {
-        user: {
-          id: user.id,
-          name: user.name,
-          surname: user.surname,
-          email: user.email,
-          age: user.age,
-          job: user.job,
-          xpValue: user.xp_value,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Add XP error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'XP eklenirken bir hata oluştu!'
-    });
-  }
-};
-
-// XP değerinden çıkarma yap
-const subtractXp = async (req, res) => {
-  try {
-    const { amount } = req.body;
-
-    if (amount === undefined || typeof amount !== 'number' || amount < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir pozitif XP miktarı girin!'
-      });
-    }
-
-    const result = await pool.query(
-      `UPDATE users 
-       SET xp_value = GREATEST(xp_value - $1, 0), updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
-      [amount, req.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Kullanıcı bulunamadı!'
-      });
-    }
-
-    const user = result.rows[0];
-
-    res.status(200).json({
-      success: true,
-      message: `${amount} XP çıkarıldı!`,
-      data: {
-        user: {
-          id: user.id,
-          name: user.name,
-          surname: user.surname,
-          email: user.email,
-          age: user.age,
-          job: user.job,
-          xpValue: user.xp_value,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Subtract XP error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'XP çıkarılırken bir hata oluştu!'
-    });
-  }
-};
-
 module.exports = {
   register,
   login,
   getMe,
-  updateXp,
-  addXp,
-  subtractXp
+  updateXp
 };

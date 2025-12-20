@@ -50,10 +50,10 @@ const register = async (req, res) => {
 
     // Yeni kullanıcı oluştur
     const result = await pool.query(
-      `INSERT INTO users (name, surname, email, password, age, job, xp_value)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
-      [name, surname, email, hashedPassword, age || null, job || null, 0]
+      `INSERT INTO users (name, surname, email, password, age, job, xp_value, vp_value)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, name, surname, email, age, job, xp_value, vp_value, created_at, updated_at`,
+      [name, surname, email, hashedPassword, age || null, job || null, 0, 0]
     );
 
     const user = result.rows[0];
@@ -77,6 +77,7 @@ const register = async (req, res) => {
           age: user.age,
           job: user.job,
           xpValue: user.xp_value,
+          vp_value: user.vp_value,
           createdAt: user.created_at
         },
         token
@@ -147,6 +148,7 @@ const login = async (req, res) => {
           age: user.age,
           job: user.job,
           xpValue: user.xp_value,
+          vp_value: user.vp_value,
           createdAt: user.created_at
         },
         token
@@ -165,7 +167,7 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, surname, email, age, job, xp_value, created_at, updated_at
+      `SELECT id, name, surname, email, age, job, xp_value, created_at, updated_at, vp_value
        FROM users 
        WHERE id = $1`,
       [req.userId]
@@ -261,9 +263,67 @@ const updateXp = async (req, res) => {
   }
 };
 
+// VP değerini güncelle (pozitif = ekle, negatif = çıkar)
+const updateVp = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (amount === undefined || typeof amount !== 'number' || !Number.isInteger(amount)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli bir VP miktarı girin (tam sayı olmalı)!'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET vp_value = GREATEST(vp_value + $1, 0), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, name, surname, email, age, job, xp_value, vp_value, created_at, updated_at`,
+      [amount, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı!'
+      });
+    }
+
+    const user = result.rows[0];
+    const message = amount >= 0 ? `${amount} VP eklendi!` : `${Math.abs(amount)} VP çıkarıldı!`;
+
+    res.status(200).json({
+      success: true,
+      message,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          surname: user.surname,
+          email: user.email,
+          age: user.age,
+          job: user.job,
+          xpValue: user.xp_value,
+          vpValue: user.vp_value,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update VP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'VP güncellenirken bir hata oluştu!'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
-  updateXp
+  updateXp,
+  updateVp
 };

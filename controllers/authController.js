@@ -50,10 +50,10 @@ const register = async (req, res) => {
 
     // Yeni kullanıcı oluştur
     const result = await pool.query(
-      `INSERT INTO users (name, surname, email, password, age, job)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, surname, email, age, job, created_at, updated_at`,
-      [name, surname, email, hashedPassword, age || null, job || null]
+      `INSERT INTO users (name, surname, email, password, age, job, xp_value)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
+      [name, surname, email, hashedPassword, age || null, job || null, 0]
     );
 
     const user = result.rows[0];
@@ -76,6 +76,7 @@ const register = async (req, res) => {
           email: user.email,
           age: user.age,
           job: user.job,
+          xpValue: user.xp_value,
           createdAt: user.created_at
         },
         token
@@ -145,6 +146,7 @@ const login = async (req, res) => {
           email: user.email,
           age: user.age,
           job: user.job,
+          xpValue: user.xp_value,
           createdAt: user.created_at
         },
         token
@@ -163,7 +165,7 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, surname, email, age, job, created_at, updated_at
+      `SELECT id, name, surname, email, age, job, xp_value, created_at, updated_at
        FROM users 
        WHERE id = $1`,
       [req.userId]
@@ -188,6 +190,7 @@ const getMe = async (req, res) => {
           email: user.email,
           age: user.age,
           job: user.job,
+          xpValue: user.xp_value,
           createdAt: user.created_at,
           updatedAt: user.updated_at
         }
@@ -202,8 +205,120 @@ const getMe = async (req, res) => {
   }
 };
 
+// XP değerini güncelle
+const updateXp = async (req, res) => {
+  try {
+    const { xpValue } = req.body;
+
+    if (xpValue === undefined || typeof xpValue !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli bir XP değeri girin!'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET xp_value = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
+      [xpValue, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı!'
+      });
+    }
+
+    const user = result.rows[0];
+
+    res.status(200).json({
+      success: true,
+      message: 'XP değeri güncellendi!',
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          surname: user.surname,
+          email: user.email,
+          age: user.age,
+          job: user.job,
+          xpValue: user.xp_value,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update XP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'XP güncellenirken bir hata oluştu!'
+    });
+  }
+};
+
+// XP değerine ekleme yap
+const addXp = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (amount === undefined || typeof amount !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli bir XP miktarı girin!'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET xp_value = xp_value + $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, name, surname, email, age, job, xp_value, created_at, updated_at`,
+      [amount, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı!'
+      });
+    }
+
+    const user = result.rows[0];
+
+    res.status(200).json({
+      success: true,
+      message: `${amount} XP eklendi!`,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          surname: user.surname,
+          email: user.email,
+          age: user.age,
+          job: user.job,
+          xpValue: user.xp_value,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Add XP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'XP eklenirken bir hata oluştu!'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
-  getMe
+  getMe,
+  updateXp,
+  addXp
 };

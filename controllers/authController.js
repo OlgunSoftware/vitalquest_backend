@@ -194,6 +194,7 @@ const getMe = async (req, res) => {
           job: user.job,
           xpValue: user.xp_value,
           vpValue: user.vp_value,
+          world_health: user.world_health,
           createdAt: user.created_at,
           updatedAt: user.updated_at
         }

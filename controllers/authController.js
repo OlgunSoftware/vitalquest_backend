@@ -321,10 +321,41 @@ const updateVp = async (req, res) => {
   }
 };
 
+// Tüm kullanıcıları getir
+const getAllUsers = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, surname, xp_value, vp_value FROM users ORDER BY xp_value DESC'
+    );
+
+    const users = result.rows.map(user => ({
+      id: user.id,
+      name: user.name,
+      surname: user.surname,
+      xpValue: user.xp_value,
+      vpValue: user.vp_value
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users: users
+      }
+    });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Kullanıcılar getirilirken bir hata oluştu!'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateXp,
-  updateVp
+  updateVp,
+  getAllUsers
 };

@@ -167,7 +167,7 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, surname, email, age, job, xp_value, created_at, updated_at, vp_value
+      `SELECT id, name, surname, email, age, job, xp_value, vp_value, world_health, created_at, updated_at
        FROM users 
        WHERE id = $1`,
       [req.userId]
@@ -352,11 +352,70 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// World Health değerini güncelle (pozitif = ekle, negatif = çıkar)
+const updateWorldHealth = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (amount === undefined || typeof amount !== 'number' || !Number.isInteger(amount)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçerli bir World Health miktarı girin (tam sayı olmalı)!'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE users 
+       SET world_health = GREATEST(world_health + $1, 0), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, name, surname, email, age, job, xp_value, vp_value, world_health, created_at, updated_at`,
+      [amount, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı!'
+      });
+    }
+
+    const user = result.rows[0];
+    const message = amount >= 0 ? `${amount} World Health eklendi!` : `${Math.abs(amount)} World Health çıkarıldı!`;
+
+    res.status(200).json({
+      success: true,
+      message,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          surname: user.surname,
+          email: user.email,
+          age: user.age,
+          job: user.job,
+          xpValue: user.xp_value,
+          vpValue: user.vp_value,
+          worldHealth: user.world_health,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update World Health error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'World Health güncellenirken bir hata oluştu!'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateXp,
   updateVp,
-  getAllUsers
+  getAllUsers,
+  updateWorldHealth
 };

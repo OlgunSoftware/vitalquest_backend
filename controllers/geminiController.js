@@ -65,7 +65,7 @@ const generateTasks = async (req, res) => {
     }
 
     // Gemini AI ile görevler oluştur
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
 Sen bir çevre ve sürdürülebilirlik uzmanısın. Kullanıcının mesleğine göre dünyayı daha iyi bir yer yapacak günlük görevler oluştur.

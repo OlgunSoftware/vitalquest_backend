@@ -8,6 +8,7 @@ require('./config/database');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const geminiRoutes = require('./routes/geminiRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/gemini', geminiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
